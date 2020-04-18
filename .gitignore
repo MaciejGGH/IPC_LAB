@@ -1,0 +1,5 @@
+#Informatica binaries and license
+informatica/software/*
+!informatica/software/Dockerfile
+
+.env

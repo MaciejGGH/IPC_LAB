@@ -1,0 +1,99 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+_command=${1:-"help"}
+
+_root_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+_bold="\033[1m"
+_normal="\033[0m"
+
+
+_help="
+${_bold}SYNOPSIS${_normal} 
+    ./bake [OPTION] [ARGUMENT]
+
+${_bold}DESCRIPTION${_normal}
+    ${_bold}help${_normal}
+        display this help and exit
+  
+    ${_bold}build [image-name]${_normal}
+        builds selected docker image
+        
+"
+
+help() {
+    echo -e "$_help"
+}
+
+
+build() {
+local _help="
+${_bold}Usage:${_normal} ./bake build [image]
+
+Build selected docker image
+
+${_bold}Images:${_normal}
+    ipc:software
+    ipc:os
+    ipc:installer
+    ipc:installed
+    ipc:final
+"
+    local image=${1:-""}
+
+
+    case $image in
+        ipc:software)
+        docker build \
+            -t ipc_lab/ipc:software \
+            -f ${_root_dir}/informatica/software/Dockerfile ${_root_dir}/informatica/software
+        ;;
+
+        ipc:os)
+        docker build \
+            --target os \
+            --cache-from ipc_lab/ipc:os \
+            -t ipc_lab/ipc:os \
+            -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
+        ;;
+
+        ipc:installer)
+            docker build \
+                --target installer \
+                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:installer \
+                -t ipc_lab/ipc:installer \
+                -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
+        ;;
+
+        ipc:installed)
+            docker build \
+                --target installed \
+                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:installer \
+                --cache-from ipc_lab/ipc:installed \
+                -t ipc_lab/ipc:installed \
+                -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
+        ;;
+
+        ipc:final)
+            docker build \
+                --target final \
+                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:installer \
+                --cache-from ipc_lab/ipc:installed \
+                --cache-from ipc_lab/ipc:final \
+                -t ipc_lab/ipc:final \
+                -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
+        ;;
+
+        *)
+        echo -e "${_help}"
+        ;;
+    esac
+}
+
+
+
+
+$_command ${@:2}

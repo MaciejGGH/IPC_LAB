@@ -1,0 +1,45 @@
+version: "3.7"
+
+volumes:
+    portainer_data:
+    oracle_data:
+        
+services:
+    portainer:
+        image: portainer/portainer
+        hostname: portainer.${BASE_URL}
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - portainer_data:/data
+        ports:
+            - 9000:9000
+            - 8000:8000
+            
+    oracle:
+        image: oracle/database:12.2.0.1-ee
+        hostname: oracle.${BASE_URL}
+        env_file: ".env"
+        ports:
+            - 1521:1521
+            - 5500:5500
+        volumes:
+            - oracle_data:/opt/oracle/oradata
+            - ./createUsers.sql:/opt/oracle/scripts/setup/createUsers.sql
+
+    informatica:
+        image: ipc_lab/ipc:final
+        hostname: ipc.${BASE_URL}
+        env_file: ".env"
+        ports:
+            - 7333:7333
+            - 8095:8095
+            - 6005-6008:6005-6008
+            - 6013-6113:6013-6113
+        volumes:
+            - ./tnsnames.ora:/home/ipc_lab/tnsnames.ora
+        depends_on:
+            - oracle
+        links:
+            - oracle
+        environment:
+            - TNS_ADMIN=/home/ipc_lab/
