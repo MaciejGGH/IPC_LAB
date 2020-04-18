@@ -10,15 +10,15 @@ $ ./bake build ipc:final
 ```
 
 Make a copy of `.env.example`
-    ```bash
-    $ cp .env.example .env
-    ```
+```bash
+$ cp .env.example .env
+```
 
+Run `docker-compose`\
 **IMPORTANT:** Provided `docker-compose.yml` file requires you to have `oracle/database:12.2.0.1-ee` image. 
-Run `docker-compose`
-    ```bash
-    $ docker-compose up
-    ```
+```bash
+$ docker-compose up
+```
 
 
 ### Informatica images
