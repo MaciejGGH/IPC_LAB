@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+INFA_CONFIG="$HOME/ipc_config"
+
 log(){
   echo "$1"
 }
@@ -51,21 +53,21 @@ mv_existing(){
 moveConfigFiles(){
     log_header "Moving config files..."
 
-    if [ ! -d $HOME/ipc_config ]; then
+    if [ ! -d $INFA_CONFIG ]; then
         log "Creating ipc_config directories"
-        mkdir -p $HOME/ipc_config
-        mkdir -p $HOME/ipc_config/isp/config
-        mkdir -p $HOME/ipc_config/isp/config/keys
-        mkdir -p $HOME/ipc_config/services/shared/security
-        mkdir -p $HOME/ipc_config/tomcat/conf/
+        mkdir -p $INFA_CONFIG
+        mkdir -p $INFA_CONFIG/isp/config
+        mkdir -p $INFA_CONFIG/isp/config/keys
+        mkdir -p $INFA_CONFIG/services/shared/security
+        mkdir -p $INFA_CONFIG/tomcat/conf/
     fi;
 
-    mv_existing $INFA_HOME/isp/config/nodemeta.xml $HOME/ipc_config/isp/config/nodemeta.xml
-    mv_existing $INFA_HOME/isp/config/keys/siteKey $HOME/ipc_config/isp/config/keys/siteKey
-    mv_existing $INFA_HOME/services/shared/security $HOME/ipc_config/services/shared/security
-    mv_existing $INFA_HOME/tomcat/conf/Default.keystore $HOME/ipc_config/tomcat/conf/Default.keystore
-    mv_existing $INFA_HOME/tomcat/conf/server.xml $HOME/ipc_config/tomcat/conf/server.xml
-    mv_existing $INFA_HOME/domains.infa $HOME/ipc_config/domains.infa
+    mv_existing $INFA_HOME/isp/config/nodemeta.xml $INFA_CONFIG/isp/config/nodemeta.xml
+    mv_existing $INFA_HOME/isp/config/keys/siteKey $INFA_CONFIG/isp/config/keys/siteKey
+    mv_existing $INFA_HOME/services/shared/security $INFA_CONFIG/services/shared/security
+    mv_existing $INFA_HOME/tomcat/conf/Default.keystore $INFA_CONFIG/tomcat/conf/Default.keystore
+    mv_existing $INFA_HOME/tomcat/conf/server.xml $INFA_CONFIG/tomcat/conf/server.xml
+    mv_existing $INFA_HOME/domains.infa $INFA_CONFIG/domains.infa
 
     symLinkConfigFiles
 }
@@ -75,12 +77,12 @@ moveConfigFiles(){
 symLinkConfigFiles(){
     log_header "Creating SymLinks..."
 
-    ln_missing $HOME/ipc_config/isp/config/nodemeta.xml $INFA_HOME/isp/config/nodemeta.xml
-    ln_missing $HOME/ipc_config/isp/config/keys/siteKey $INFA_HOME/isp/config/keys/siteKey
-    ln_missing $HOME/ipc_config/services/shared/security $INFA_HOME/services/shared/security
-    ln_missing $HOME/ipc_config/tomcat/conf/Default.keystore $INFA_HOME/tomcat/conf/Default.keystore
-    ln_missing $HOME/ipc_config/tomcat/conf/server.xml $INFA_HOME/tomcat/conf/server.xml
-    ln_missing $HOME/ipc_config/domains.infa $INFA_HOME/domains.infa
+    ln_missing $INFA_CONFIG/isp/config/nodemeta.xml $INFA_HOME/isp/config/nodemeta.xml
+    ln_missing $INFA_CONFIG/isp/config/keys/siteKey $INFA_HOME/isp/config/keys/siteKey
+    ln_missing $INFA_CONFIG/services/shared/security $INFA_HOME/services/shared/security
+    ln_missing $INFA_CONFIG/tomcat/conf/Default.keystore $INFA_HOME/tomcat/conf/Default.keystore
+    ln_missing $INFA_CONFIG/tomcat/conf/server.xml $INFA_HOME/tomcat/conf/server.xml
+    ln_missing $INFA_CONFIG/domains.infa $INFA_HOME/domains.infa
 }
 
 generateEncryptionKey(){
@@ -206,14 +208,16 @@ hangout() {
 
 init_trap
 
-if [[ ! -f $INFA_HOME/isp/config/keys/siteKey ]]; then
+if [[ ! -f $INFA_CONFIG/isp/config/keys/siteKey ]]; then
     generateEncryptionKey
 fi
 
 waitForOracle
-prepareNode
+if [[ ! -f $INFA_CONFIG/isp/config/nodemeta.xml && ! -f $INFA_CONFIG/tomcat/conf/server.xml ]]; then
+    prepareNode
+fi
 
-if [[ -d $HOME/ipc_config ]]; then
+if [[ -d $INFA_CONFIG ]]; then
     symLinkConfigFiles
 else
     moveConfigFiles
