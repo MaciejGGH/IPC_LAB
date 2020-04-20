@@ -39,7 +39,8 @@ ln_missing(){
 
     if [[ ! -L $target || $sourcPath != $targetPath ]]; then
         log "Creating SymLink for: ${target}"
-        ln -sf $source $target
+        rm -rf $target
+        ln -sfn $source $target
     fi
 }
 
@@ -61,13 +62,13 @@ moveConfigFiles(){
         mkdir -p $INFA_CONFIG
         mkdir -p $INFA_CONFIG/isp/config
         mkdir -p $INFA_CONFIG/isp/config/keys
-        mkdir -p $INFA_CONFIG/services/shared/security
+        mkdir -p $INFA_CONFIG/services/shared
         mkdir -p $INFA_CONFIG/tomcat/conf/
     fi;
 
     mv_existing $INFA_HOME/isp/config/nodemeta.xml $INFA_CONFIG/isp/config/nodemeta.xml
     mv_existing $INFA_HOME/isp/config/keys/siteKey $INFA_CONFIG/isp/config/keys/siteKey
-    mv_existing $INFA_HOME/services/shared/security $INFA_CONFIG/services/shared/security
+    mv_existing $INFA_HOME/services/shared/security $INFA_CONFIG/services/shared
     mv_existing $INFA_HOME/tomcat/conf/Default.keystore $INFA_CONFIG/tomcat/conf/Default.keystore
     mv_existing $INFA_HOME/tomcat/conf/server.xml $INFA_CONFIG/tomcat/conf/server.xml
     mv_existing $INFA_HOME/domains.infa $INFA_CONFIG/domains.infa
