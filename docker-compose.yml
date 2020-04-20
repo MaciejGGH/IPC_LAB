@@ -3,6 +3,7 @@ version: "3.7"
 volumes:
     portainer_data:
     oracle_data:
+    informatica:
         
 services:
     portainer:
@@ -36,6 +37,7 @@ services:
             - 6005-6008:6005-6008
             - 6013-6113:6013-6113
         volumes:
+            - informatica:/home/ipc_lab
             - ./tnsnames.ora:/home/ipc_lab/tnsnames.ora
         depends_on:
             - oracle
