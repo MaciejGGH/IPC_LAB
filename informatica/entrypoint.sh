@@ -34,9 +34,12 @@ ln_missing(){
     local source=$1
     local target=$2
 
-    if [[ ! -L $target ]]; then
+    local sourcPath="$(realpath "$source")"
+    local targetPath="$(realpath "$target")"
+
+    if [[ ! -L $target || $sourcPath != $targetPath ]]; then
         log "Creating SymLink for: ${target}"
-        ln -s $source $target
+        ln -sf $source $target
     fi
 }
 
@@ -224,7 +227,7 @@ else
 fi
 
 log_header "Starting server..."
-$INFA_HOME/tomcat/bin/infaservice.sh startup
+# $INFA_HOME/tomcat/bin/infaservice.sh startup
 # TODO
 # add startup veryfication
 
