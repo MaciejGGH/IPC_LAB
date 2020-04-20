@@ -227,7 +227,7 @@ else
 fi
 
 log_header "Starting server..."
-# $INFA_HOME/tomcat/bin/infaservice.sh startup
+$INFA_HOME/tomcat/bin/infaservice.sh startup
 # TODO
 # add startup veryfication
 
