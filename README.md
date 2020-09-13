@@ -23,7 +23,8 @@ $ docker-compose up
 
 ### Informatica images
 * ipc_lab/ipc:software
-* ipc_lab/ipc:os
+* ipc_lab/ipc:base-os
+* ipc_lab/ipc:final-os
 * ipc_lab/ipc:installer
 * ipc_lab/ipc:installed
 * ipc_lab/ipc:final
@@ -32,17 +33,20 @@ $ docker-compose up
 ### Building intermediate images
 ```bash
 # To build ipc_lab/ipc:software
-$ ./bake build ipc:software
+$ ./bake build software
 
-# To build ipc_lab/ipc:os
-$ ./bake build ipc:os
+# To build ipc_lab/ipc:base-os
+$ ./bake build base-os
+
+# To build ipc_lab/ipc:final-os
+$ ./bake build final-os
 
 # To build ipc_lab/ipc:installer
-$ ./bake build ipc:installer
+$ ./bake build installer
 
 # To build ipc_lab/ipc:installed
-$ ./bake build ipc:installed
+$ ./bake build installed
 
 # To build ipc_lab/ipc:final
-$ ./bake build ipc:final
+$ ./bake build final
 ```

@@ -33,53 +33,64 @@ ${_bold}Usage:${_normal} ./bake build [image]
 Build selected docker image
 
 ${_bold}Images:${_normal}
-    ipc:software
-    ipc:os
-    ipc:installer
-    ipc:installed
-    ipc:final
+    software
+    base-os
+    final-os
+    installer
+    installed
+    final
 "
     local image=${1:-""}
 
 
     case $image in
-        ipc:software)
+        software)
         docker build \
             -t ipc_lab/ipc:software \
             -f ${_root_dir}/informatica/software/Dockerfile ${_root_dir}/informatica/software
         ;;
 
-        ipc:os)
+        base-os)
         docker build \
-            --target os \
-            --cache-from ipc_lab/ipc:os \
-            -t ipc_lab/ipc:os \
+            --target base-os \
+            --cache-from ipc_lab/ipc:base-os \
+            -t ipc_lab/ipc:base-os \
             -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
         ;;
 
-        ipc:installer)
+        final-os)
+        docker build \
+            --target final-os \
+            --cache-from ipc_lab/ipc:base-os \
+            --cache-from ipc_lab/ipc:final-os \
+            -t ipc_lab/ipc:final-os \
+            -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
+        ;;
+
+        installer)
             docker build \
                 --target installer \
-                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:base-os \
                 --cache-from ipc_lab/ipc:installer \
                 -t ipc_lab/ipc:installer \
                 -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
         ;;
 
-        ipc:installed)
+        installed)
             docker build \
                 --target installed \
-                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:base-os \
                 --cache-from ipc_lab/ipc:installer \
                 --cache-from ipc_lab/ipc:installed \
                 -t ipc_lab/ipc:installed \
                 -f ${_root_dir}/informatica/Dockerfile ${_root_dir}/informatica
         ;;
 
-        ipc:final)
+        final)
             docker build \
                 --target final \
-                --cache-from ipc_lab/ipc:os \
+                --cache-from ipc_lab/ipc:base-os \
+                --cache-from ipc_lab/ipc:final-os \
                 --cache-from ipc_lab/ipc:installer \
                 --cache-from ipc_lab/ipc:installed \
                 --cache-from ipc_lab/ipc:final \
