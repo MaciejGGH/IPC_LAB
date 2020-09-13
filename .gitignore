@@ -2,4 +2,7 @@
 informatica/software/*
 !informatica/software/Dockerfile
 
+oracle/software/*
+!oracle/software/Dockerfile
+
 .env
