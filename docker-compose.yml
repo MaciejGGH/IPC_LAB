@@ -17,15 +17,15 @@ services:
             - 8000:8000
             
     oracle:
-        image: oracle/database:12.2.0.1-ee
+        image: ipc_lab/oracle:12.2.0.1
         hostname: oracle.${BASE_URL}
         env_file: ".env"
         ports:
             - 1521:1521
             - 5500:5500
         volumes:
-            - oracle_data:/opt/oracle/oradata
-            - ./createUsers.sql:/opt/oracle/scripts/setup/createUsers.sql
+            - oracle_data:/var/lib/oracle
+            - ./createUsers.sql:/docker-entrypoint-initdb.d/createUsers.sql
 
     informatica:
         image: ipc_lab/ipc:final
