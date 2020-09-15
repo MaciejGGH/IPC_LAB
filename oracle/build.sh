@@ -18,7 +18,10 @@ ${_bold}IMAGES${_normal}
         image with software binaries
 
     ${_bold}base-os${_normal}
-        image with operating system and basic libs    
+        image with operating system and basic libs
+
+    ${_bold}builder${_normal}
+        builder image 
   
     ${_bold}final${_normal}
         final image with working database
@@ -49,10 +52,20 @@ build() {
             -f "${_root_dir}/Dockerfile" "${_root_dir}"
         ;;
 
+        builder)
+            docker build \
+            --target builder \
+            --cache-from ipc_lab/oracle-base-os:12.2.0.1 \
+            --cache-from ipc_lab/oracle-builder:12.2.0.1 \
+            -t ipc_lab/oracle-builder:12.2.0.1 \
+            -f "${_root_dir}/Dockerfile" "${_root_dir}"
+        ;;
+
         final)
         docker build \
             --target final \
             --cache-from ipc_lab/oracle-base-os:12.2.0.1 \
+            --cache-from ipc_lab/oracle-builder:12.2.0.1 \
             --cache-from ipc_lab/oracle:12.2.0.1 \
             -t ipc_lab/oracle:12.2.0.1 \
             -f "${_root_dir}/Dockerfile" "${_root_dir}"
