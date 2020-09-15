@@ -27,6 +27,9 @@ $ ./build.sh software
 # build image with os
 $ ./build.sh base-os
 
+# build builder image
+$ ./build.sh builder
+
 # build final image
 $ ./build.sh final
 ```

@@ -22,7 +22,7 @@ RUN mkdir -p ${ORACLE_HOME} \
 #   Builder layer
 #######################################
 FROM base-os as builder
-COPY --chown=oracle:oracle --from=ipc_lab/oracle-software:12.2.0.1 ${SOFTWARE_DIR} ${SOFTWARE_DIR}
+COPY --chown=oracle:dba --from=ipc_lab/oracle-software:12.2.0.1 ${SOFTWARE_DIR} ${SOFTWARE_DIR}
 USER oracle
 
 RUN cd ${SOFTWARE_DIR} \
@@ -64,7 +64,7 @@ RUN rm -rf /tmp/* \
     && ${ORACLE_BASE}/oraInventory/orainstRoot.sh \
     && ${ORACLE_HOME}/root.sh
 
-COPY --chown=oracle:oracle scripts/install.rsp scripts/createDB.sh /tmp/
+COPY --chown=oracle:dba scripts/install.rsp scripts/createDB.sh /tmp/
 USER oracle
 RUN /tmp/createDB.sh
 
@@ -74,13 +74,21 @@ RUN /tmp/createDB.sh
 #######################################
 FROM base-os as final
 
-USER oracle
-WORKDIR /home/oracle
-
+COPY --chown=oracle:oinstall --from=builder /etc/oratab /etc/oratab
 COPY --chown=oracle:dba --from=builder $ORACLE_BASE $ORACLE_BASE
-COPY --chown=oracle:oracle scripts/startDB.sh /tmp/
 
-RUN mkdir -p /home/oracle/volume-data
+ENV ORADATA_DIR="/var/lib/oracle/oradata" \
+    PDBS_DIR="/var/lib/oracle/pdbs" 
 
+RUN mkdir -p "${ORADATA_DIR}" \
+    mkdir -p "${PDBS_DIR}" \
+    mkdir /docker-entrypoint-initdb.d \
+    && chown -R oracle:dba /var/lib/oracle \
+    && chown -R oracle:dba /docker-entrypoint-initdb.d
 
-CMD exec /tmp/startDB.sh
+VOLUME /var/lib/oracle
+
+USER oracle
+
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["docker-entrypoint.sh"]
