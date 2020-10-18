@@ -1,0 +1,72 @@
+# Stage: base-os
+FROM ubuntu:20.04 as base-os
+
+RUN groupadd -r -g 6005 informatica && useradd -r -g informatica -m -u 6005 informatica
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates wget unzip keyutils libselinux1 libsepol1 libidn11 locales \
+    && rm -rf /var/lib/apt/lists/* \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+
+
+
+# Stage: installer
+FROM base-os as installer
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
+RUN mkdir -p /opt/Informatica && chown -R informatica:informatica /opt/Informatica
+
+ADD ./software/informatica_1041_server_linux-x64.tar /tmp/software/
+COPY ./software/license.key /tmp/software/
+RUN chown -R informatica:informatica /tmp/software
+
+USER informatica
+COPY ./scripts/autoinstall.sh /tmp
+RUN /tmp/autoinstall.sh && rm -rf /tmp/software
+
+
+
+# Stage: final-os
+FROM base-os as final-os
+RUN apt-get update && apt-get install -y --no-install-recommends libaio1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && wget -P /tmp/oracle https://download.oracle.com/otn_software/linux/instantclient/19800/instantclient-sqlplus-linux.x64-19.8.0.0.0dbru.zip \
+    && wget -P /tmp/oracle https://download.oracle.com/otn_software/linux/instantclient/19800/instantclient-basic-linux.x64-19.8.0.0.0dbru.zip \
+    && mkdir /opt/oracle \
+    && cd /opt/oracle \
+    && unzip /tmp/oracle/instantclient-sqlplus-linux.x64-19.8.0.0.0dbru.zip \
+    && unzip /tmp/oracle/instantclient-basic-linux.x64-19.8.0.0.0dbru.zip \
+    && echo /opt/oracle/instantclient_19_8 > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig \
+    && rm -R /tmp/oracle
+
+
+
+# Stage: final
+FROM final-os as final
+USER informatica
+COPY --chown=informatica:informatica --from=installer /opt/Informatica /opt/Informatica
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    ORACLE_HOME=/opt/oracle/instantclient_19_8 \
+    NLS_LANG=AMERICAN_AMERICA.AL32UTF8 \
+    INFA_HOME=/opt/Informatica
+
+ENV INFA_DOMAINS_FILE=$INFA_HOME/domains.infa \
+    IFCONTENTMASTER_HOME=$INFA_HOME/DataTransformation/ \
+    ODBCHOME=$INFA_HOME/ODBC7.1 \
+    ODBCINI=$INFA_HOME/ODBC7.1/odbc.ini
+
+ENV LD_LIBRARY_PATH=$INFA_HOME/server/bin:$ODBCHOME/lib:$INFA_HOME/services/shared/bin:$ORACLE_HOME:/usr/lib:/usr/lib64 \
+    PATH=$ORACLE_HOME:$PATH
+
+COPY ./entrypoint.sh /usr/local/bin
+WORKDIR /home/informatica
+
+HEALTHCHECK --interval=1m --start-period=3m \
+    CMD $INFA_HOME/isp/bin/infacmd.sh ping -dn $IPC_DOMAIN_NAME >/dev/null || exit 1
+
+CMD ["entrypoint.sh"]

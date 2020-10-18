@@ -2,6 +2,9 @@
 informatica/software/*
 !informatica/software/Dockerfile
 
+informatica/10.4.1/software/*
+!informatica/10.4.1/software/.gitkeep
+
 oracle/software/*
 !oracle/software/Dockerfile
 
