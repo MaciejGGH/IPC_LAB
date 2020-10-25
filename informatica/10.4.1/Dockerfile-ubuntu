@@ -4,7 +4,7 @@ FROM ubuntu:20.04 as base-os
 RUN groupadd -r -g 6005 informatica && useradd -r -g informatica -m -u 6005 informatica
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates wget unzip keyutils libselinux1 libsepol1 libidn11 locales \
+        gnupg ca-certificates wget unzip keyutils libselinux1 libsepol1 libidn11 locales \
     && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
@@ -41,7 +41,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends libaio1 \
     && echo /opt/oracle/instantclient_19_8 > /etc/ld.so.conf.d/oracle-instantclient.conf \
     && ldconfig \
     && rm -R /tmp/oracle
-
+    
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    && echo "deb http://apt.postgresql.org/pub/repos/apt/ ${UBUNTU_CODENAME}-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y postgresql-client-13 \
+    && rm -rf /var/lib/apt/lists/*
 
 
 # Stage: final
