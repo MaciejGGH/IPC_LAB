@@ -23,6 +23,26 @@ log_header(){
 =================================================================="
 }
 
+
+file_env() {
+    local var="$1"
+    local fileVar="${var}_FILE"
+    local def="${2:-}"
+    if [ "${!var:-}" ] && [ "${!fileVar:-}" ]; then
+        echo >&2 "error: both $var and $fileVar are set (but are exclusive)"
+        exit 1
+    fi
+    local val="$def"
+    if [ "${!var:-}" ]; then
+        val="${!var}"
+    elif [ "${!fileVar:-}" ]; then
+        val="$(<"${!fileVar}")"
+    fi
+    export "$var"="$val"
+    unset "$fileVar"
+}
+
+
 exit_on_fail(){
     if [[ $? -ne 0 ]]; then
         log_error "$1"
@@ -88,68 +108,69 @@ symlinkConfigFiles(){
     ln_missing "${INFA_CONFIG}/domains.infa" "${INFA_HOME}/domains.infa"
 }
 
-generateEncryptionKey(){
+generateEncryptionKey() {
     log_header "Generating Encryption key..."
 
-    $INFA_HOME/isp/bin/infasetup.sh generateEncryptionKey \
-    -kw ${IPC_ENCRYPTION_KEY} \
-    -dn ${IPC_DOMAIN_NAME}
+    "${INFA_HOME}/isp/bin/infasetup.sh" generateEncryptionKey \
+        -kw "${DOMAIN_ENCRYPTION_KEY}" \
+        -dn "${DOMAIN_NAME}"
 
     exit_on_fail "Could not create encryption key!"
 }
 
-prepareNode(){    
-    local count=$(sqlplus -s ${IPC_DOMAIN_USER}/${IPC_DOMAIN_PASSWORD}@oracle <<END
-set pagesize 0 feedback off verify off heading off echo off;
-select count(1) from user_tables
-exit;
-END
-)
-
-    err=$(echo ${count} | grep -ic error)
-
-    if [[ $err -gt 0 ]]; then
-        log_error "Cant access domain schema!"
-        exit 1
-    fi
-
-    if [[ $count -gt 0 ]]; then
-        defineGatewayNode
-    else
-        defineDomain
-    fi
-
-}
-
-defineGatewayNode(){
+defineGatewayNode() {
     log_header "Defining Gateway Node..."
 
-    $INFA_HOME/isp/bin/infasetup.sh defineGatewayNode \
-    -dt ORACLE -cs "jdbc:informatica:oracle://oracle:1521;ServiceName=${ORACLE_PDB}" \
-    -du ${IPC_DOMAIN_USER} -dp ${IPC_DOMAIN_PASSWORD} \
-    -dn ${IPC_DOMAIN_NAME} \
-    -nn node01 -na ipc.${BASE_URL}:6005 \
-    -ld /opt/Informatica/isp/log/ \
-    -rf /opt/Informatica/isp/bin/nodeoptions.xml \
-    -sv 6007 -ap 6008 -asp 6009
+    "${INFA_HOME}/isp/bin/infasetup.sh" defineGatewayNode \
+        -DatabaseType "${DOMAIN_DB_TYPE}" \
+        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
+        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
+        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
+        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
+        -DomainName "${DOMAIN_NAME}" \
+        -NodeName "${NODE_NAME}" \
+        -NodeAddress "${HOSTNAME}:6005" \
+        -LogServiceDirectory "${INFA_HOME}/isp/log" \
+        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
+        -ServerPort 6007 \
+        -AdminconsolePort 6008 \
+        -AdminconsoleShutdownPort 6009
 
     exit_on_fail "Could not define gateway node!"
 }
 
-defineDomain(){
+defineDomain() {
     log_header "Defining domain..."
-    
-    $INFA_HOME/isp/bin/infasetup.sh defineDomain \
-    -dt ORACLE -cs "jdbc:informatica:oracle://oracle:1521;ServiceName=${ORACLE_PDB}" \
-    -du ${IPC_DOMAIN_USER} -dp ${IPC_DOMAIN_PASSWORD} \
-    -dn ${IPC_DOMAIN_NAME} \
-    -nn node01 -na ipc.${BASE_URL}:6005 \
-    -ad ${IPC_ADMIN_USER} -pd ${IPC_ADMIN_PASSWORD} \
-    -ld $INFA_HOME/isp/log \
-    -rf $INFA_HOME/isp/bin/nodeoptions.xml \
-    -kd $INFA_HOME/isp/config/keys \
-    -mi 6013 -ma 6113 \
-    -sv 6007 -ap 6008 -asp 6009
+
+    local params=()
+
+    # add license key if provided
+    if [[ "${LICENSE_FILE_EXISTS}" == true ]]; then
+        licenseFileName=$(basename "${LICENSE_KEY_FILE}")
+
+        params+=(-LicenseKeyFile "${LICENSE_KEY_FILE}")
+        params+=(-LicenseName "${licenseFileName}")
+    fi
+
+    "${INFA_HOME}/isp/bin/infasetup.sh" defineDomain \
+        -DatabaseType "${DOMAIN_DB_TYPE}" \
+        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
+        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
+        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
+        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
+        -DomainName "${DOMAIN_NAME}" \
+        -AdministratorName "${DOMAIN_ADMIN_USERNAME}" \
+        -Password "${DOMAIN_ADMIN_PASSWORD}" \
+        -NodeName "${NODE_NAME}" \
+        -NodeAddress "${HOSTNAME}:6005" \
+        -LogServiceDirectory "${INFA_HOME}/isp/log" \
+        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
+        -KeysDirectory "${INFA_HOME}/isp/config/keys" \
+        -MinProcessPort 6013 \
+        -MaxProcessPort 6113 \
+        -ServerPort 6007 \
+        -AdminconsolePort 6008 \
+        -AdminconsoleShutdownPort 6009 "${params[@]}"
 
     exit_on_fail "Could not define domain!"
 }
@@ -159,9 +180,9 @@ waitForOracle(){
 
     local timeout=60
     local result
-   
+
     for i in $(seq 1 ${timeout}); do
-        echo "QUIT" | sqlplus -L "${IPC_DOMAIN_USER}/${IPC_DOMAIN_PASSWORD}@oracle" | grep "Connected to:" > /dev/null 2>&1
+        echo "QUIT" | sqlplus -L "${DOMAIN_DB_USERNAME}/${DOMAIN_DB_PASSWORD}@${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}/${DOMAIN_DB_SERVICE_NAME}" | grep "Connected to:" > /dev/null 2>&1
         result=$?
 
         if [[ ${result} -eq 0 ]] ; then
@@ -180,21 +201,29 @@ waitForOracle(){
     fi
 }
 
-stop() {
-    log_header 'terminating ...'
+startServer() {
+    log_header "Starting server..."
 
-    $INFA_HOME/tomcat/bin/infaservice.sh shutdown
-    
-    # TODO
-    # replace with check if server has been shutdown
+    "${INFA_HOME}/tomcat/bin/infaservice.sh" startup
+
+    exit_on_fail "Failed to start server"
+
+    tail --retry -f "${INFA_HOME}/logs/${NODE_NAME}/node.log" &
+    childPID=$!
+    wait $childPID
+}
+
+stopServer() {
+    log_header "Stopping server..."
+
+    "${INFA_HOME}/tomcat/bin/infaservice.sh" shutdown
+
     snore 10
-    log_header 'terminated'
-    exit 0
 }
 
 
 init_trap() {
-  trap stop SIGTERM SIGINT SIGKILL
+  trap stopServer SIGTERM SIGINT SIGKILL
 }
 
 snore() {
@@ -203,36 +232,102 @@ snore() {
     read ${1:+-t "$1"} -u $_snore_fd || :
 }
 
-hangout() {
-  log_header 'Ready'
 
-  while :; do snore 30 & wait; done
+validate_env() {
+    log_header "Validating environment variables"
+
+    local requiredVariables=(
+        "DOMAIN_NAME"
+        "DOMAIN_ENCRYPTION_KEY"
+        "DOMAIN_DB_TYPE"
+        "DOMAIN_DB_HOST"
+        "DOMAIN_DB_PORT"
+        "DOMAIN_DB_SERVICE_NAME"
+        "DOMAIN_DB_USERNAME"
+        "DOMAIN_DB_PASSWORD"
+        "DOMAIN_ADMIN_USERNAME"
+        "DOMAIN_ADMIN_PASSWORD"
+        "DOMAIN_ACTION"
+        "NODE_NAME"
+    )
+
+    declare -n variable
+    local missingVariable=false
+
+    for variable in "${requiredVariables[@]}"; do
+        if [[ ! -v variable ]]; then
+            missingVariable=true
+            log_error "Variable <${!variable}> is required and must be set"
+        fi
+    done
+
+    if [[ "${missingVariable}" == true ]]; then
+        exit 1
+    fi
+
+
+    if [[ "${DOMAIN_DB_TYPE^^}" != "ORACLE" && "${DOMAIN_DB_TYPE^^}" != "POSTGRESQL" ]]; then
+        log_error "<DOMAIN_DB_TYPE> must be set to one of two values 'Oracle' or 'PostgreSQL'!"
+        exit 1
+    fi
+
+    if [[ "${DOMAIN_ACTION^^}" != "CREATE" && "${DOMAIN_ACTION}" != "JOIN" ]]; then
+        log_error "<DOMAIN_ACTION> must be set to 'CREATE' or 'JOIN'!"
+        exit 1
+    fi
+
+
+    log "OK"
 }
 
-main () {
-    init_trap
+setup_env() {
+    file_env "NODE_NAME" "node_${RANDOM}"
+    file_env "DOMAIN_ACTION" "CREATE"
 
-    if [[ ! -f $INFA_CONFIG/isp/config/keys/siteKey ]]; then
+    declare -g INFA_CONFIG="${HOME}/infa_config"
+
+    declare -g LICENSE_FILE_EXISTS=false
+    if [[ -n "${LICENSE_KEY_FILE}" && -f "${LICENSE_KEY_FILE}" ]]; then
+        LICENSE_FILE_EXISTS=true
+    fi
+}
+
+main() {
+    setup_env
+    validate_env
+
+    if [[ ! -f "${INFA_CONFIG}/isp/config/keys/siteKey" ]]; then
         generateEncryptionKey
     fi
 
-    waitForOracle
-    if [[ ! -f $INFA_CONFIG/isp/config/nodemeta.xml && ! -f $INFA_CONFIG/tomcat/conf/server.xml ]]; then
-        prepareNode
+
+    if [[ "${DOMAIN_DB_TYPE^^}" == "ORACLE" ]]; then
+        waitForOracle
     fi
 
-    if [[ -d $INFA_CONFIG ]]; then
+
+    if [[ ! -f "${INFA_CONFIG}/isp/config/nodemeta.xml" && ! -f "${INFA_CONFIG}/tomcat/conf/server.xm" ]]; then
+        case "${DOMAIN_ACTION^^}" in
+            CREATE)
+                defineDomain
+                ;;
+
+            JOIN)
+                defineGatewayNode
+                ;;
+        esac
+        
+    fi;
+
+
+    if [[ -d "${INFA_CONFIG}" ]]; then
         symlinkConfigFiles
     else
         moveConfigFiles
     fi
 
-    log_header "Starting server..."
-    $INFA_HOME/tomcat/bin/infaservice.sh startup
-    # TODO
-    # add startup veryfication
-
-    hangout
+    init_trap
+    startServer
 }
 
 main
