@@ -210,26 +210,30 @@ hangout() {
   while :; do snore 30 & wait; done
 }
 
-init_trap
+main () {
+    init_trap
 
-if [[ ! -f $INFA_CONFIG/isp/config/keys/siteKey ]]; then
-    generateEncryptionKey
-fi
+    if [[ ! -f $INFA_CONFIG/isp/config/keys/siteKey ]]; then
+        generateEncryptionKey
+    fi
 
-waitForOracle
-if [[ ! -f $INFA_CONFIG/isp/config/nodemeta.xml && ! -f $INFA_CONFIG/tomcat/conf/server.xml ]]; then
-    prepareNode
-fi
+    waitForOracle
+    if [[ ! -f $INFA_CONFIG/isp/config/nodemeta.xml && ! -f $INFA_CONFIG/tomcat/conf/server.xml ]]; then
+        prepareNode
+    fi
 
-if [[ -d $INFA_CONFIG ]]; then
-    symLinkConfigFiles
-else
-    moveConfigFiles
-fi
+    if [[ -d $INFA_CONFIG ]]; then
+        symLinkConfigFiles
+    else
+        moveConfigFiles
+    fi
 
-log_header "Starting server..."
-$INFA_HOME/tomcat/bin/infaservice.sh startup
-# TODO
-# add startup veryfication
+    log_header "Starting server..."
+    $INFA_HOME/tomcat/bin/infaservice.sh startup
+    # TODO
+    # add startup veryfication
 
-hangout
+    hangout
+}
+
+main
