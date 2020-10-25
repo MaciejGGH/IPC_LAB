@@ -41,6 +41,11 @@ RUN wget -P /tmp/oracle https://download.oracle.com/otn_software/linux/instantcl
     && dnf clean all \
     && rm -rf /var/cache/dnf /tmp/oracle
 
+RUN dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+    && dnf -y module disable postgresql \
+    && dnf install -y postgresql13
+    && rm -rf /var/cache/dnf
+
 
 # Stage: ipc:final
 FROM final-os as final
