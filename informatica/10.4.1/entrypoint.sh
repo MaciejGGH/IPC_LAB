@@ -34,13 +34,15 @@ ln_missing(){
     local source=$1
     local target=$2
 
-    local sourcPath="$(realpath "$source")"
-    local targetPath="$(realpath "$target")"
+    local sourcePath
+    sourcePath="$(realpath "$source")"
 
-    if [[ ! -L $target || $sourcPath != $targetPath ]]; then
-        log "Creating SymLink for: ${target}"
-        rm -rf $target
-        ln -sfn $source $target
+    local targetPath
+    targetPath="$(realpath "$target")"
+
+    if [[ ! -L "${target}" || "${sourcePath}" != "${targetPath}" ]]; then
+        rm -vrf "${target}"
+        ln -vsfn "${source}" "${target}"
     fi
 }
 
@@ -48,45 +50,42 @@ mv_existing(){
     local source=$1
     local target=$2
 
-    if [[ -f $source || -d $source ]]; then
-        log "Movig ${source} to ${target}"
-        mv $source $target
+    if [[ -f "${source}" || -d "${source}" ]]; then
+        mv -v "${source}" "${target}"
     fi
 }
+
 
 moveConfigFiles(){
     log_header "Moving config files..."
 
-    if [ ! -d $INFA_CONFIG ]; then
+    if [ ! -d "${INFA_CONFIG}" ]; then
         log "Creating ipc_config directories"
-        mkdir -p $INFA_CONFIG
-        mkdir -p $INFA_CONFIG/isp/config
-        mkdir -p $INFA_CONFIG/isp/config/keys
-        mkdir -p $INFA_CONFIG/services/shared
-        mkdir -p $INFA_CONFIG/tomcat/conf/
+        mkdir -pv "${INFA_CONFIG}/isp/config/keys"
+        mkdir -pv "${INFA_CONFIG}/services/shared"
+        mkdir -pv "${INFA_CONFIG}/tomcat/conf/"
     fi;
 
-    mv_existing $INFA_HOME/isp/config/nodemeta.xml $INFA_CONFIG/isp/config/nodemeta.xml
-    mv_existing $INFA_HOME/isp/config/keys/siteKey $INFA_CONFIG/isp/config/keys/siteKey
-    mv_existing $INFA_HOME/services/shared/security $INFA_CONFIG/services/shared
-    mv_existing $INFA_HOME/tomcat/conf/Default.keystore $INFA_CONFIG/tomcat/conf/Default.keystore
-    mv_existing $INFA_HOME/tomcat/conf/server.xml $INFA_CONFIG/tomcat/conf/server.xml
-    mv_existing $INFA_HOME/domains.infa $INFA_CONFIG/domains.infa
+    mv_existing "${INFA_HOME}/isp/config/nodemeta.xml" "${INFA_CONFIG}/isp/config/nodemeta.xml"
+    mv_existing "${INFA_HOME}/isp/config/keys/siteKey" "${INFA_CONFIG}/isp/config/keys/siteKey"
+    mv_existing "${INFA_HOME}/services/shared/security" "${INFA_CONFIG}/services/shared"
+    mv_existing "${INFA_HOME}/tomcat/conf/Default.keystore" "${INFA_CONFIG}/tomcat/conf/Default.keystore"
+    mv_existing "${INFA_HOME}/tomcat/conf/server.xml" "${INFA_CONFIG}/tomcat/conf/server.xml"
+    mv_existing "${INFA_HOME}/domains.infa" "${INFA_CONFIG}/domains.infa"
 
-    symLinkConfigFiles
+    symlinkConfigFiles
 }
 
 
-
-symLinkConfigFiles(){
+symlinkConfigFiles(){
     log_header "Creating SymLinks..."
 
-    ln_missing $INFA_CONFIG/isp/config/nodemeta.xml $INFA_HOME/isp/config/nodemeta.xml
-    ln_missing $INFA_CONFIG/isp/config/keys/siteKey $INFA_HOME/isp/config/keys/siteKey
-    ln_missing $INFA_CONFIG/services/shared/security $INFA_HOME/services/shared/security
-    ln_missing $INFA_CONFIG/tomcat/conf/Default.keystore $INFA_HOME/tomcat/conf/Default.keystore
-    ln_missing $INFA_CONFIG/tomcat/conf/server.xml $INFA_HOME/tomcat/conf/server.xml
-    ln_missing $INFA_CONFIG/domains.infa $INFA_HOME/domains.infa
+    ln_missing "${INFA_CONFIG}/isp/config/nodemeta.xml" "${INFA_HOME}/isp/config/nodemeta.xml"
+    ln_missing "${INFA_CONFIG}/isp/config/keys/siteKey" "${INFA_HOME}/isp/config/keys/siteKey"
+    ln_missing "${INFA_CONFIG}/services/shared/security" "${INFA_HOME}/services/shared/security"
+    ln_missing "${INFA_CONFIG}/tomcat/conf/Default.keystore" "${INFA_HOME}/tomcat/conf/Default.keystore"
+    ln_missing "${INFA_CONFIG}/tomcat/conf/server.xml" "${INFA_HOME}/tomcat/conf/server.xml"
+    ln_missing "${INFA_CONFIG}/domains.infa" "${INFA_HOME}/domains.infa"
 }
 
 generateEncryptionKey(){
@@ -223,7 +222,7 @@ main () {
     fi
 
     if [[ -d $INFA_CONFIG ]]; then
-        symLinkConfigFiles
+        symlinkConfigFiles
     else
         moveConfigFiles
     fi
