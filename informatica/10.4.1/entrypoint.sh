@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
 
-INFA_CONFIG="$HOME/ipc_config"
-
-log(){
-  echo "$1"
+log() {
+    echo "$1"
 }
 
-log_warning(){
-  log "WARNING: $1"
+log_warning() {
+    log "WARNING: $1"
 }
 
-log_error(){
-  log ''
-  log "ERROR: $1"
-  log ''
+log_error() {
+    log ''
+    log "ERROR: $1"
+    log ''
 }
 
-log_header(){
-  echo "
+log_header() {
+    echo "
 ==================================================================
       ${1^^}
 =================================================================="
 }
-
 
 file_env() {
     local var="$1"
@@ -42,12 +39,17 @@ file_env() {
     unset "$fileVar"
 }
 
-
-exit_on_fail(){
+exit_on_fail() {
     if [[ $? -ne 0 ]]; then
         log_error "$1"
         exit 1
     fi
+}
+
+snore() {
+    local IFS
+    [[ -n "${_snore_fd:-}" ]] || exec {_snore_fd}<> <(:)
+    read ${1:+-t "$1"} -u $_snore_fd || :
 }
 
 ln_missing(){
@@ -75,6 +77,16 @@ mv_existing(){
     fi
 }
 
+symlinkConfigFiles(){
+    log_header "Creating SymLinks..."
+
+    ln_missing "${INFA_CONFIG}/isp/config/nodemeta.xml" "${INFA_HOME}/isp/config/nodemeta.xml"
+    ln_missing "${INFA_CONFIG}/isp/config/keys/siteKey" "${INFA_HOME}/isp/config/keys/siteKey"
+    ln_missing "${INFA_CONFIG}/services/shared/security" "${INFA_HOME}/services/shared/security"
+    ln_missing "${INFA_CONFIG}/tomcat/conf/Default.keystore" "${INFA_HOME}/tomcat/conf/Default.keystore"
+    ln_missing "${INFA_CONFIG}/tomcat/conf/server.xml" "${INFA_HOME}/tomcat/conf/server.xml"
+    ln_missing "${INFA_CONFIG}/domains.infa" "${INFA_HOME}/domains.infa"
+}
 
 moveConfigFiles(){
     log_header "Moving config files..."
@@ -96,84 +108,6 @@ moveConfigFiles(){
     symlinkConfigFiles
 }
 
-
-symlinkConfigFiles(){
-    log_header "Creating SymLinks..."
-
-    ln_missing "${INFA_CONFIG}/isp/config/nodemeta.xml" "${INFA_HOME}/isp/config/nodemeta.xml"
-    ln_missing "${INFA_CONFIG}/isp/config/keys/siteKey" "${INFA_HOME}/isp/config/keys/siteKey"
-    ln_missing "${INFA_CONFIG}/services/shared/security" "${INFA_HOME}/services/shared/security"
-    ln_missing "${INFA_CONFIG}/tomcat/conf/Default.keystore" "${INFA_HOME}/tomcat/conf/Default.keystore"
-    ln_missing "${INFA_CONFIG}/tomcat/conf/server.xml" "${INFA_HOME}/tomcat/conf/server.xml"
-    ln_missing "${INFA_CONFIG}/domains.infa" "${INFA_HOME}/domains.infa"
-}
-
-generateEncryptionKey() {
-    log_header "Generating Encryption key..."
-
-    "${INFA_HOME}/isp/bin/infasetup.sh" generateEncryptionKey \
-        -kw "${DOMAIN_ENCRYPTION_KEY}" \
-        -dn "${DOMAIN_NAME}"
-
-    exit_on_fail "Could not create encryption key!"
-}
-
-defineGatewayNode() {
-    log_header "Defining Gateway Node..."
-
-    "${INFA_HOME}/isp/bin/infasetup.sh" defineGatewayNode \
-        -DatabaseType "${DOMAIN_DB_TYPE}" \
-        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
-        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
-        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
-        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
-        -DomainName "${DOMAIN_NAME}" \
-        -NodeName "${NODE_NAME}" \
-        -NodeAddress "${HOSTNAME}:6005" \
-        -LogServiceDirectory "${INFA_HOME}/isp/log" \
-        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
-        -ServerPort 6007 \
-        -AdminconsolePort 6008 \
-        -AdminconsoleShutdownPort 6009
-
-    exit_on_fail "Could not define gateway node!"
-}
-
-defineDomain() {
-    log_header "Defining domain..."
-
-    local params=()
-
-    # add license key if provided
-    if [[ "${LICENSE_FILE_EXISTS}" == true ]]; then
-        licenseFileName=$(basename "${LICENSE_KEY_FILE}")
-
-        params+=(-LicenseKeyFile "${LICENSE_KEY_FILE}")
-        params+=(-LicenseName "${licenseFileName}")
-    fi
-
-    "${INFA_HOME}/isp/bin/infasetup.sh" defineDomain \
-        -DatabaseType "${DOMAIN_DB_TYPE}" \
-        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
-        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
-        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
-        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
-        -DomainName "${DOMAIN_NAME}" \
-        -AdministratorName "${DOMAIN_ADMIN_USERNAME}" \
-        -Password "${DOMAIN_ADMIN_PASSWORD}" \
-        -NodeName "${NODE_NAME}" \
-        -NodeAddress "${HOSTNAME}:6005" \
-        -LogServiceDirectory "${INFA_HOME}/isp/log" \
-        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
-        -KeysDirectory "${INFA_HOME}/isp/config/keys" \
-        -MinProcessPort 6013 \
-        -MaxProcessPort 6113 \
-        -ServerPort 6007 \
-        -AdminconsolePort 6008 \
-        -AdminconsoleShutdownPort 6009 "${params[@]}"
-
-    exit_on_fail "Could not define domain!"
-}
 
 waitForOracle(){
     log_header "Waiting for Oracle..."
@@ -201,6 +135,81 @@ waitForOracle(){
     fi
 }
 
+
+generateEncryptionKey() {
+    log_header "Generating Encryption key..."
+
+    "${INFA_HOME}/isp/bin/infasetup.sh" generateEncryptionKey \
+        -kw "${DOMAIN_ENCRYPTION_KEY}" \
+        -dn "${DOMAIN_NAME}"
+
+    exit_on_fail "Could not create encryption key!"
+}
+
+defineDomain() {
+    log_header "Defining domain..."
+
+    local params=()
+
+    # add license key if provided
+    if [[ "${LICENSE_FILE_EXISTS}" == true ]]; then
+        licenseFileName=$(basename "${LICENSE_KEY_FILE}")
+
+        params+=(-LicenseKeyFile "${LICENSE_KEY_FILE}")
+        params+=(-LicenseName "${licenseFileName}")
+    fi
+
+    "${INFA_HOME}/isp/bin/infasetup.sh" defineDomain \
+        -DatabaseType "${DOMAIN_DB_TYPE}" \
+        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
+        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
+        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
+        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
+        -DomainName "${DOMAIN_NAME}" \
+        -AdministratorName "${DOMAIN_ADMIN_USERNAME}" \
+        -Password "${DOMAIN_ADMIN_PASSWORD}" \
+        -NodeName "${NODE_NAME}" \
+        -NodeAddress "${HOSTNAME}:${DOMAIN_GATEWAY_PORT}" \
+        -LogServiceDirectory "${INFA_HOME}/isp/log" \
+        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
+        -KeysDirectory "${INFA_HOME}/isp/config/keys" \
+        -MinProcessPort 6013 \
+        -MaxProcessPort 6113 \
+        -ServerPort 6007 \
+        -AdminconsolePort 6008 \
+        -AdminconsoleShutdownPort 6009 "${params[@]}"
+
+    exit_on_fail "Could not define domain!"
+}
+
+defineGatewayNode() {
+    log_header "Defining Gateway Node..."
+
+    "${INFA_HOME}/isp/bin/infasetup.sh" defineGatewayNode \
+        -DatabaseType "${DOMAIN_DB_TYPE}" \
+        -DatabaseAddress "${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}" \
+        -DatabaseServiceName "${DOMAIN_DB_SERVICE_NAME}" \
+        -DatabaseUserName "${DOMAIN_DB_USERNAME}" \
+        -DatabasePassword "${DOMAIN_DB_PASSWORD}" \
+        -DomainName "${DOMAIN_NAME}" \
+        -NodeName "${NODE_NAME}" \
+        -NodeAddress "${HOSTNAME}:${DOMAIN_GATEWAY_PORT}" \
+        -LogServiceDirectory "${INFA_HOME}/isp/log" \
+        -ResourceFile "${INFA_HOME}/isp/bin/nodeoptions.xml" \
+        -ServerPort 6007 \
+        -AdminconsolePort 6008 \
+        -AdminconsoleShutdownPort 6009
+
+    exit_on_fail "Could not define gateway node!"
+}
+
+pingDomain() {
+    "${INFA_HOME}/isp/bin/infacmd.sh" ping \
+        -DomainName "${DOMAIN_NAME}" \
+        -GatewayAddress "${DOMAIN_GATEWAY_HOST}:${DOMAIN_GATEWAY_PORT}" \
+        -ResilienceTimeout 5
+}
+
 startServer() {
     log_header "Starting server..."
 
@@ -210,6 +219,16 @@ startServer() {
 
     tail --retry -f "${INFA_HOME}/logs/${NODE_NAME}/node.log" &
     childPID=$!
+
+    
+    local pingResult
+    while [[ "${pingResult}" != *"Command ran successfully"* ]]; do
+        log "running ping..."
+        pingResult=$(pingDomain)
+        echo "${pingResult}"
+        snore 5
+    done
+
     wait $childPID
 }
 
@@ -222,16 +241,10 @@ stopServer() {
 }
 
 
+
 init_trap() {
-  trap stopServer SIGTERM SIGINT SIGKILL
+  trap stopServer SIGTERM SIGINT
 }
-
-snore() {
-    local IFS
-    [[ -n "${_snore_fd:-}" ]] || exec {_snore_fd}<> <(:)
-    read ${1:+-t "$1"} -u $_snore_fd || :
-}
-
 
 validate_env() {
     log_header "Validating environment variables"
@@ -249,6 +262,8 @@ validate_env() {
         "DOMAIN_ADMIN_PASSWORD"
         "DOMAIN_ACTION"
         "NODE_NAME"
+        "DOMAIN_GATEWAY_HOST"
+        "DOMAIN_GATEWAY_PORT"
     )
 
     declare -n variable
@@ -283,6 +298,10 @@ validate_env() {
 setup_env() {
     file_env "NODE_NAME" "node_${RANDOM}"
     file_env "DOMAIN_ACTION" "CREATE"
+
+    file_env "DOMAIN_GATEWAY_HOST" "${HOSTNAME}"
+    file_env "DOMAIN_GATEWAY_PORT" "6005"
+
 
     declare -g INFA_CONFIG="${HOME}/infa_config"
 
