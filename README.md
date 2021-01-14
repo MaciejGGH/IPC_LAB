@@ -5,8 +5,8 @@ Copy Informatica 10.2 installation binnaries to `informatica/software`
 
 Build `ipc:software` and `ipc:final` images
 ```bash
-$ ./bake build ipc:software
-$ ./bake build ipc:final
+$ ./bake build software
+$ ./bake build final
 ```
 
 Make a copy of `.env.example`
