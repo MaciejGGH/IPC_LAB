@@ -1,0 +1,28 @@
+= Informatica 10.4.1 setup on PostreSQL
+
+== POSGRES env variables
+
+Set variables in .env.postgres
+
+    POSTGRES_USER=...
+    POSTGRES_DB=...
+
+== Build docker image for Informatica 10.4.1
+
+NOTE: It may be needed to convert CRLF
+
+    find . -name "*.sh" -type f -exec dos2unix {} \;
+
+Build images:
+
+    docker-compose -f docker-compose.pg.yml up
+
+Make sure `c:\Windows\System32\drivers\etc\hosts` configuration `127.0.0.1 informatica.local.vm` is in place.
+
+Open http://informatica.local.vm:6008/administrator/#admin[Informatica Administrator] website.
+
+== Start Tomcat
+
+If needed, attach shell to Informatica container and start Tomcat service
+
+    "${INFA_HOME}/tomcat/bin/infaservice.sh" startup`
