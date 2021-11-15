@@ -26,3 +26,22 @@ Open http://informatica.local.vm:6008/administrator/#admin[Informatica Administr
 If needed, attach shell to Informatica container and start Tomcat service
 
     "${INFA_HOME}/tomcat/bin/infaservice.sh" startup`
+
+== Informatica Administrator
+
+. Add License +
+Manage > Services and Nodes > Actions > New > License
+. Create PowerCenter Repository Service +
+Manage > Services and Nodes > Actions > New > PowerCenter Repository Service
+.. Name: IPCLAB_DOM
+.. DB type: PostgreSQL
+.. Username/Pass/Connection string: IPCLAB_REP
+.. Code Page: UTF-8
+
+== Configure domains
+
+Domain Name: `IPCLAB_DOM`
+
+Gateway Host: `informatica.local.vm`
+
+Gateway Port: `6005`
